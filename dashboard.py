@@ -52,17 +52,21 @@ def build_region_bar(df: pd.DataFrame) -> go.Figure:
         .reset_index()
         .sort_values("revenue", ascending=False)
     )
-    fig = px.bar(
-        summary, x="region", y="revenue",
-        color="region",
-        color_discrete_sequence=px.colors.qualitative.Set2,
-        labels={"revenue": "Total Revenue ($)", "region": "Region"},
+    colors = ["#00B4D8", "#F4A261", "#02C39A", "#9B59B6"]
+    fig = go.Figure(go.Bar(
+        x=summary["region"],
+        y=summary["revenue"],
+        marker_color=colors[:len(summary)],
+        hovertemplate="<b>%{x}</b><br>Revenue: $%{y:,.0f}<extra></extra>",
+    ))
+    fig.update_layout(
         title="Revenue by Region",
+        plot_bgcolor="white",
+        yaxis=dict(tickprefix="$", tickformat=",.0f", title="Total Revenue ($)"),
+        xaxis=dict(title="Region"),
+        showlegend=False,
+        margin=dict(t=50, b=30),
     )
-    fig.update_layout(showlegend=False, plot_bgcolor="white",
-                      yaxis=dict(tickprefix="$", tickformat=",.0f"),
-                      margin=dict(t=50, b=30))
-    fig.update_traces(hovertemplate="<b>%{x}</b><br>Revenue: $%{y:,.0f}<extra></extra>")
     return fig
 
 
