@@ -45,31 +45,28 @@ def load_data(path: Path = DATA_PATH) -> pd.DataFrame:
 
 
 def build_region_bar(df: pd.DataFrame) -> go.Figure:
-    """Revenue by region — bar chart."""
+    """Revenue by region — horizontal bar chart."""
     summary = (
         df.groupby("region")["revenue"]
         .sum()
         .reset_index()
-        .sort_values("revenue", ascending=False)
+        .sort_values("revenue", ascending=True)   # ascending so largest is at top
     )
-    colors = ["#00B4D8", "#F4A261", "#02C39A", "#9B59B6"]
+    colors = ["#9B59B6", "#02C39A", "#F4A261", "#00B4D8"]
     fig = go.Figure(go.Bar(
-        x=summary["region"],
-        y=summary["revenue"],
+        x=summary["revenue"],
+        y=summary["region"],
+        orientation="h",
         marker_color=colors[:len(summary)],
-        hovertemplate="<b>%{x}</b><br>Revenue: $%{y:,.0f}<extra></extra>",
+        hovertemplate="<b>%{y}</b><br>Revenue: $%{x:,.0f}<extra></extra>",
     ))
     fig.update_layout(
         title="Revenue by Region",
         plot_bgcolor="white",
-        yaxis=dict(tickprefix="$", tickformat=",.0f", title="Total Revenue ($)"),
-        xaxis=dict(
-            title="Region",
-            categoryorder="array",
-            categoryarray=summary["region"].tolist(),
-        ),
+        xaxis=dict(tickprefix="$", tickformat=",.0f", title="Total Revenue ($)"),
+        yaxis=dict(title="Region"),
         showlegend=False,
-        margin=dict(t=50, b=30),
+        margin=dict(t=50, b=30, l=80),
     )
     return fig
 
