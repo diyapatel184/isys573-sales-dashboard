@@ -68,3 +68,11 @@ Required columns: `date`, `region`, `category`, `product`,
 - NEVER: Modify data/sales.csv
 - NEVER: Add a web server (Flask, FastAPI, Streamlit) — output must stay HTML
 - NEVER: Use deprecated Plotly APIs (use `plotly.express` or `plotly.graph_objects`)
+
+## Feature Being Implemented
+Add a Year-over-Year (YoY) Revenue Comparison Chart to the dashboard.
+- Current year revenue plotted as a solid blue line
+- Prior year revenue plotted as a gray dashed line  
+- Tooltips showing absolute dollar difference and % change per month
+- Chart appears below the existing summary KPIs
+- New pytest tests required in tests/test_dashboard.py
