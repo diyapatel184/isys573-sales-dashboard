@@ -7,6 +7,7 @@ Reads data/sales.csv and generates an interactive HTML report with:
   - Monthly revenue trend (line chart)
   - Revenue by category (pie chart)
   - Top 10 products by revenue (horizontal bar)
+  - Sales rep leaderboard (horizontal bar)
   - Summary KPI cards
 
 Usage:
@@ -15,6 +16,7 @@ Usage:
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -50,7 +52,7 @@ def build_region_bar(df: pd.DataFrame) -> go.Figure:
         df.groupby("region")["revenue"]
         .sum()
         .reset_index()
-        .sort_values("revenue", ascending=True)   # ascending so largest is at top
+        .sort_values("revenue", ascending=True)
     )
     colors = ["#9B59B6", "#02C39A", "#F4A261", "#00B4D8"]
     fig = go.Figure(go.Bar(
@@ -142,6 +144,32 @@ def build_top_products(df: pd.DataFrame, n: int = 10) -> go.Figure:
     return fig
 
 
+def build_rep_leaderboard(df: pd.DataFrame) -> go.Figure:
+    """Sales rep leaderboard — horizontal bar chart sorted by total revenue."""
+    leaderboard = (
+        df.groupby("sales_rep")["revenue"]
+        .sum()
+        .reset_index()
+        .sort_values("revenue", ascending=True)
+    )
+    fig = go.Figure(go.Bar(
+        x=leaderboard["revenue"],
+        y=leaderboard["sales_rep"],
+        orientation="h",
+        marker_color="#02C39A",
+        hovertemplate="<b>%{y}</b><br>Revenue: $%{x:,.0f}<extra></extra>",
+    ))
+    fig.update_layout(
+        title="Sales Rep Leaderboard",
+        plot_bgcolor="white",
+        xaxis=dict(tickprefix="$", tickformat=",.0f", title="Total Revenue ($)"),
+        yaxis=dict(title="Sales Rep"),
+        showlegend=False,
+        margin=dict(t=50, b=30, l=120),
+    )
+    return fig
+
+
 def kpi_card_html(label: str, value: str, color: str = "#2196F3") -> str:
     """Render a single KPI card as HTML."""
     return f"""
@@ -166,18 +194,18 @@ def build_html(df: pd.DataFrame) -> str:
     for q in quarters:
         subset = df if q == "Full Year" else df[df["quarter"] == q]
         if subset.empty:
-            # Placeholder for quarters with no data
             empty = go.Figure()
             empty.update_layout(title="No data for this period")
             chart_data[q] = {
-                "region": empty.to_json(),
-                "monthly": empty.to_json(),
-                "category": empty.to_json(),
+                "region":       empty.to_json(),
+                "monthly":      empty.to_json(),
+                "category":     empty.to_json(),
                 "top_products": empty.to_json(),
+                "leaderboard":  empty.to_json(),
                 "total_revenue": "$0",
-                "total_orders": "0",
-                "avg_order": "$0",
-                "top_region": "—",
+                "total_orders":  "0",
+                "avg_order":     "$0",
+                "top_region":    "—",
             }
             continue
 
@@ -194,14 +222,13 @@ def build_html(df: pd.DataFrame) -> str:
             "monthly":      build_monthly_line(subset).to_json(),
             "category":     build_category_pie(subset).to_json(),
             "top_products": build_top_products(subset).to_json(),
+            "leaderboard":  build_rep_leaderboard(subset).to_json(),
             "total_revenue": f"${total_rev:,.0f}",
             "total_orders":  f"{total_orders:,}",
             "avg_order":     f"${avg_order:,.0f}",
             "top_region":    top_region,
         }
 
-    # Serialize all chart data to embed in HTML
-    import json
     chart_json = json.dumps(chart_data)
 
     html = f"""<!DOCTYPE html>
@@ -232,6 +259,7 @@ def build_html(df: pd.DataFrame) -> str:
                   gap:20px;padding:16px 32px 32px;}}
     .chart-card{{background:#fff;border-radius:10px;
                  padding:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);}}
+    .full-width{{grid-column:1/-1;}}
     @media(max-width:800px){{.charts-grid{{grid-template-columns:1fr;}}}}
     footer{{text-align:center;padding:16px;font-size:12px;color:#999;
             border-top:1px solid #e0e6ed;background:#fff;}}
@@ -260,16 +288,18 @@ def build_html(df: pd.DataFrame) -> str:
 <div class="kpis" id="kpiRow"></div>
 
 <div class="charts-grid">
-  <div class="chart-card"><div id="chartRegion"  style="height:340px;"></div></div>
-  <div class="chart-card"><div id="chartMonthly" style="height:340px;"></div></div>
+  <div class="chart-card"><div id="chartRegion"      style="height:340px;"></div></div>
+  <div class="chart-card"><div id="chartMonthly"     style="height:340px;"></div></div>
   <div class="chart-card"><div id="chartCategory"    style="height:340px;"></div></div>
   <div class="chart-card"><div id="chartTopProducts" style="height:340px;"></div></div>
+  <div class="chart-card full-width"><div id="chartLeaderboard" style="height:420px;"></div></div>
 </div>
 
 <footer>
   Built with Python · Pandas · Plotly &nbsp;|&nbsp;
   ISYS 573 AugOps Demo &nbsp;|&nbsp;
-  github.com/[your-handle]/isys573-sales-dashboard
+  Agent: Claude (Anthropic) &nbsp;|&nbsp;
+  Issue #1 — Sales Rep Leaderboard
 </footer>
 
 <script>
@@ -294,10 +324,11 @@ function applyFilter(quarter) {{
     </div>`).join("");
 
   // Charts
-  Plotly.react("chartRegion",      JSON.parse(d.region).data,      JSON.parse(d.region).layout,      {{responsive:true}});
-  Plotly.react("chartMonthly",     JSON.parse(d.monthly).data,     JSON.parse(d.monthly).layout,     {{responsive:true}});
-  Plotly.react("chartCategory",    JSON.parse(d.category).data,    JSON.parse(d.category).layout,    {{responsive:true}});
+  Plotly.react("chartRegion",      JSON.parse(d.region).data,       JSON.parse(d.region).layout,       {{responsive:true}});
+  Plotly.react("chartMonthly",     JSON.parse(d.monthly).data,      JSON.parse(d.monthly).layout,      {{responsive:true}});
+  Plotly.react("chartCategory",    JSON.parse(d.category).data,     JSON.parse(d.category).layout,     {{responsive:true}});
   Plotly.react("chartTopProducts", JSON.parse(d.top_products).data, JSON.parse(d.top_products).layout, {{responsive:true}});
+  Plotly.react("chartLeaderboard", JSON.parse(d.leaderboard).data,  JSON.parse(d.leaderboard).layout,  {{responsive:true}});
 
   document.getElementById("filterLabel").textContent =
     quarter === "Full Year" ? "Showing all 2024 data" : `Showing ${{quarter}} 2024 only`;
