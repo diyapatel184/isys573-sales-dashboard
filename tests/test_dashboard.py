@@ -109,3 +109,32 @@ class TestTopProducts:
         fig = build_top_products(df)
         revenues = list(fig.data[0].x)
         assert revenues == sorted(revenues)
+
+class TestRepLeaderboard:
+    def test_returns_figure(self, df):
+        from dashboard import build_rep_leaderboard
+        fig = build_rep_leaderboard(df)
+        assert fig is not None
+
+    def test_all_reps_included(self, df):
+        from dashboard import build_rep_leaderboard
+        fig = build_rep_leaderboard(df)
+        assert len(fig.data[0].y) == df["sales_rep"].nunique()
+
+    def test_sorted_ascending_for_horizontal_bar(self, df):
+        from dashboard import build_rep_leaderboard
+        fig = build_rep_leaderboard(df)
+        revenues = list(fig.data[0].x)
+        assert revenues == sorted(revenues)
+
+    def test_revenue_values_positive(self, df):
+        from dashboard import build_rep_leaderboard
+        fig = build_rep_leaderboard(df)
+        assert all(v > 0 for v in fig.data[0].x)
+
+    def test_filtered_by_quarter(self, df):
+        from dashboard import build_rep_leaderboard
+        q1 = df[df["quarter"] == "Q1"]
+        fig = build_rep_leaderboard(q1)
+        assert fig is not None
+        assert len(fig.data[0].y) > 0
